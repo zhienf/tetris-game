@@ -37,61 +37,83 @@ const Block = {
   HEIGHT: Viewport.CANVAS_HEIGHT / Constants.GRID_HEIGHT,
 };
 
-/** TETROMINO */
-type Tetromino = Readonly<{
-  tetrominoType: TetrominoType,
-  pos: Vec
-}>
-
-type TetrominoType = {
-  shape: number[][];
-  color: string;
-};
-
-class Vec {
-  constructor(public readonly x: number = 0, public readonly y: number = 0) { }
-  add = (b: Vec) => new Vec(this.x + b.x, this.y + b.y)
-  sub = (b: Vec) => this.add(b.scale(-1))
-  len = () => Math.sqrt(this.x * this.x + this.y * this.y)
-  scale = (s: number) => new Vec(this.x * s, this.y * s)
-  ortho = () => new Vec(this.y, -this.x)
-  rotate = (deg: number) =>
-      (rad => (
-          (cos, sin, { x, y }) => new Vec(x * cos - y * sin, x * sin + y * cos)
-      )(Math.cos(rad), Math.sin(rad), this)
-      )(Math.PI * deg / 180)
-
-  static unitVecInDirection = (deg: number) => new Vec(0, -1).rotate(deg)
-  static Zero = new Vec();
-}
-
 /** User input */
 
 type Key = "KeyS" | "KeyA" | "KeyD";
 
 type Event = "keydown" | "keyup" | "keypress";
 
+/** Possible input directions */
+type Direction = "left" | "right" | "down";
+
 /** Utility functions */
+
+/** TETROMINO */
+type TetrominoProps = Readonly<{
+  height: number,
+  width: number,
+  x: number,
+  y: number,
+  style: string,
+}>;
+
+type Tetromino = Readonly<{
+  shape: number[][],
+  topLeft: { row: number, col: number }
+  props: TetrominoProps
+}>;
+
+const tetrominoGreen: Tetromino = { 
+  shape: [
+    [1], 
+  ], 
+  topLeft: {
+    row: 0,
+    col: 4
+  },
+  props: {
+    height: Block.HEIGHT,
+    width: Block.WIDTH,
+    x: Block.WIDTH,
+    y: Block.HEIGHT,
+    style: "fill: green",
+  }
+};
+
+const randomBrick = () => tetrominoGreen;
+
+const clearGame = () =>
+  Array(Constants.GRID_HEIGHT)
+    .fill(0)
+    .map(e => Array(Constants.GRID_WIDTH).fill(0));
+
+const updatePosition = (position: number, column: number) =>
+position === 0 ? column : position; // if col is 0, update with 1
 
 /** State processing */
 
+// TODO: ? change x,y to Vec
 type State = Readonly<{
+  grid: number[][];
   gameEnd: boolean;
-  // tetrominoPos: Vec;
   x: number;
   y: number;
-  dx: number;
-  dy: number;
+  currentTetromino: Tetromino;
 }>;
 
+// TODO: modify to consider other tetromino type width
+const initialX = Math.floor(Viewport.CANVAS_WIDTH / 2) - Math.floor(Block.WIDTH / 2);
+const nearestMultipleOfBlockWidth = Math.floor(initialX / Block.WIDTH) * Block.WIDTH;
+
 const initialState: State = {
+  grid: clearGame(),
   gameEnd: false,
-  // tetrominoPos: new Vec(0, 0),
-  x: 0,
+  x: 4,
   y: 0,
-  dx: Block.WIDTH,
-  dy: Block.HEIGHT
+  currentTetromino: tetrominoGreen
 } as const;
+
+let tetrominoElement: SVGElement | null = null; // TODO: let is mutable
 
 /**
  * Updates the state by proceeding with one time step.
@@ -99,10 +121,34 @@ const initialState: State = {
  * @param s Current state
  * @returns Updated state
  */
-const tick = (s: State): State => ({
-  ...s,
-  y: s.y + s.dy,
-});
+const tick = (s: State): State => {
+  // Update the tetromino's position
+  const newState = ({
+    ...s,
+    y: s.y + 1,
+  });
+
+  // // Check for collision with the bottom or other blocks
+  // if (collisionDetected(newState)) {
+  //   // Place the current tetromino on the grid
+  //   updateGridWithTetromino(newState);
+
+  //   // Spawn a new tetromino at the top
+  //   const newTetromino = [
+  //     [1], 
+  //   ];
+  //   newState.currentTetromino = newTetromino;
+  //   newState.y = 0; // Reset y-coordinate to the top
+  // }
+
+  // if (newState.y + Block.HEIGHT > Viewport.CANVAS_HEIGHT) {
+  //   tetrominoElement = null; 
+  //   newState.x = nearestMultipleOfBlockWidth; // TODO: impure?
+  //   newState.y = 0;
+  // }
+  
+  return newState;
+};
 
 /**
  * Updates the state to ensure the rectangle stays within
@@ -112,8 +158,12 @@ const tick = (s: State): State => ({
 const boundX = (state: State): State => {
   const { x, ...rest } = state;
 
-  if (x + Block.WIDTH > Viewport.CANVAS_WIDTH) {
-    return { x: Viewport.CANVAS_WIDTH - Block.WIDTH, ...rest };
+  if (x < 0) {
+    return { x: 0, ...rest };
+  }
+
+  if (x + 1 > Constants.GRID_WIDTH) {
+    return { x: Constants.GRID_WIDTH - 1, ...rest };
   }
   return state;
 };
@@ -126,8 +176,12 @@ const boundX = (state: State): State => {
 const boundY = (state: State): State => {
   const { y, ...rest } = state;
 
-  if (y + Block.HEIGHT > Viewport.CANVAS_HEIGHT) {
-    return { y: Viewport.CANVAS_HEIGHT - Block.HEIGHT, ...rest };
+  if (y < 0) {
+    return { y: 0, ...rest };
+  }
+
+  if (y + 1 > Constants.GRID_HEIGHT) {
+    return { y: Constants.GRID_HEIGHT - 1, ...rest }; // TODO: need stop when collide
   }
   return state;
 };
@@ -164,10 +218,13 @@ const hide = (elem: SVGGraphicsElement) =>
 const createSvgElement = (
   namespace: string | null,
   name: string,
-  props: Record<string, string> = {} // refer to tute3 RectProps
+  props: TetrominoProps,
+  column: number
 ) => {
   const elem = document.createElementNS(namespace, name) as SVGElement;
-  Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, v));
+  if (column === 1) {
+    Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, String(v)));
+  }
   return elem;
 };
 
@@ -195,9 +252,6 @@ export function main() {
   const scoreText = document.querySelector("#scoreText") as HTMLElement;
   const highScoreText = document.querySelector("#highScoreText") as HTMLElement;
 
-  /** Possible input directions */
-  type Direction = "left" | "right" | "down";
-
   /** Event that represents an input */
   class InputEvent {
     constructor(public readonly direction: Direction) {}
@@ -213,21 +267,14 @@ export function main() {
   const key$ = fromEvent<KeyboardEvent>(document, "keypress");
 
   const fromKey = (keyCode: Key, direction: Direction) =>
-    key$.pipe(filter(({ code }) => code === keyCode),
-    map(() => new InputEvent(direction)));
+    key$.pipe(
+      filter(({ code }) => code === keyCode),
+      map(() => new InputEvent(direction))
+    );
 
   const left$ = fromKey("KeyA", "left");
-  // .pipe(
-  //   map(() => new Vec(-Block.WIDTH, 0)) // Move left
-  // );
   const right$ = fromKey("KeyD", "right");
-  // .pipe(
-  //   map(() => new Vec(Block.WIDTH, 0)) // Move right
-  // );
   const down$ = fromKey("KeyS", "down");
-  // .pipe(
-  //   map(() => new Vec(0, Block.HEIGHT)) // Move down
-  // );
   const input$ = merge(left$, right$, down$);
 
   /** Observables */
@@ -243,66 +290,58 @@ export function main() {
    * @param s Current state
    */
   const render = (s: State) => {
-    // Add blocks to the main grid canvas
-    const cube = createSvgElement(svg.namespaceURI, "rect", {
-      height: `${Block.HEIGHT}`,
-      width: `${Block.WIDTH}`,
-      x: "0",
-      y: "0",
-      style: "fill: green",
-    });
-    svg.appendChild(cube);
-    const cube2 = createSvgElement(svg.namespaceURI, "rect", {
-      height: `${Block.HEIGHT}`,
-      width: `${Block.WIDTH}`,
-      x: `${Block.WIDTH * (3 - 1)}`,
-      y: `${Block.HEIGHT * (20 - 1)}`,
-      style: "fill: red",
-    });
-    svg.appendChild(cube2);
-    const cube3 = createSvgElement(svg.namespaceURI, "rect", {
-      height: `${Block.HEIGHT}`,
-      width: `${Block.WIDTH}`,
-      x: `${Block.WIDTH * (4 - 1)}`,
-      y: `${Block.HEIGHT * (20 - 1)}`,
-      style: "fill: red",
-    });s
-    svg.appendChild(cube3);
+    // if (!tetrominoElement) {
+    //   tetrominoElement = createSvgElement(svg.namespaceURI, "rect", s.currentTetromino.props, 1);
+    //   svg.appendChild(tetrominoElement);
+    // }
 
-    // Add a block to the preview canvas
-    const cubePreview = createSvgElement(preview.namespaceURI, "rect", {
-      height: `${Block.HEIGHT}`,
-      width: `${Block.WIDTH}`,
-      x: `${Block.WIDTH * 2}`,
-      y: `${Block.HEIGHT}`,
-      style: "fill: green",
-    });
-    preview.appendChild(cubePreview);
+    // tetrominoElement.setAttribute("x", String(s.x));
+    // tetrominoElement.setAttribute("y", String(s.y));
+    svg.innerHTML = '';
+    const gridShown = clearGame()
 
-    cube.setAttribute("x", String(s.x))
-    cube.setAttribute("y", String(s.y))
+    const createBlock = (row: number, col: number) => {
+      const block = createSvgElement(svg.namespaceURI, "rect", {
+        height: Block.HEIGHT,
+        width: Block.WIDTH,
+        x: Block.WIDTH * row, // 20px each block
+        y: Block.HEIGHT * col,
+        style: "fill: green",
+      }, 1);
+      svg.appendChild(block);
+    }
+  
+    s.grid.forEach((row, i) => 
+      row.forEach((col, j) => 
+        gridShown[i][j] = col));
+
+    s.currentTetromino.shape.forEach((row, i) => 
+      row.forEach((col, j) => 
+        gridShown[i + s.x][j + s.y] = col));
+
+    gridShown.forEach((row, i) => 
+      row.forEach((col, j) => 
+        (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
+
+    // s.grid.forEach((row, i) => 
+    //   row.forEach((col, j) => 
+    //     (s.grid[i][j] != 0) ? createBlock(i, j) : 0));
+    
+    // s.currentTetromino.shape.forEach((row, i) => 
+    //   row.forEach((col, j) => {
+    //     console.log(i + s.currentTetromino.topLeft.col),
+    //     console.log(i + s.x),
+    //     console.log(j + s.currentTetromino.topLeft.row),
+    //     console.log(j + s.y),
+    //     (s.currentTetromino.shape[i][j] != 0) ? createBlock(i + s.x, j + s.y) : 0
+    //   })
+    // );
   };
 
   const source$ = merge(input$, tick$)
     .pipe(scan((s: State, event) => {
-      // if (!s.gameEnd) {
-      //   let newPosition: Vec;
-
-      //   if (typeof move === "number") {
-      //     // Handle tick (no movement)
-      //     newPosition = s.tetrominoPos; // No change in position
-      //   } else {
-      //     // Handle user input
-      //     newPosition = s.tetrominoPos.add(move); // Assuming Vec has an add method
-
-      //     // Check for collisions or out of bounds before updating position
-      //   }
-
-      //   return { ...s, tetrominoPos: newPosition };
-      // }
-      // return s;
       const newState = processEvent(event, s);
-      return checkBounds(newState);
+      return checkBounds(newState); // TODO: need check for collisions also
     }, initialState))
     .subscribe((s: State) => {
       render(s);
@@ -334,11 +373,11 @@ export function main() {
   const move = (state: State, direction: Direction): State => {
     switch (direction) {
       case "left":
-        return { ...state, x: state.x - Block.WIDTH };
+        return { ...state, x: state.x - 1 };
       case "right":
-        return { ...state, x: state.x + Block.WIDTH };
+        return { ...state, x: state.x + 1 };
       case "down":
-        return { ...state, y: state.y + Block.HEIGHT };
+        return { ...state, y: state.y + 1 };
     }
   };
 
