@@ -134,7 +134,7 @@ const isStackingOnBlocks = (state: State): boolean => {
 }
 
 const checkStackingOnBlocks = (state: State): State => {
-  if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0)))) {
+  if (isStackingOnBlocks(state)) {
     return tetrominoLanded(state);
   }
   return state;
@@ -150,8 +150,6 @@ const checkSideCollisions = (state: State, direction: Direction): State => {
 };
 
 const checkCollisions = (state: State, direction: Direction | null = null): State => {
-  // checks whether the next potential position would go out of bound
-  // if yes, stop falling and add current tetro to grid
   const isOnGround = state.row + state.currentTetromino.shape.length > Constants.GRID_HEIGHT - 1
 
   return direction ? checkSideCollisions(state, direction) : isOnGround ? tetrominoLanded(state) : checkStackingOnBlocks(state);
@@ -171,8 +169,8 @@ const tetrominoLanded = (s: State): State => {
     }))
 
   const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomBrick() }
+  // end game if newly generated tetromino immediately collides with row below
   return isStackingOnBlocks(newState) ? { ...newState, gameEnd: true } : newState;
-  // return newState;
 };
 
 /**
@@ -188,8 +186,6 @@ const tick = (s: State): State => {
     row: s.row + 1,
   });
 
-  // const collisionState = checkCollisions(newState)
-  // return isStackingOnBlocks(collisionState) ? { ...collisionState, gameEnd: true } : collisionState; // check if tetromino should land
   return checkCollisions(newState);
 };
 
@@ -331,63 +327,49 @@ export function main() {
    *
    * @param s Current state
    */
-  const render = (s: State) => {
-    gameGrid.innerHTML = ''; // clear previous elements
-    const gridShown = clearGame()
+  function render(onFinish: () => void) {
+    return function (s: State): void {
+      gameGrid.innerHTML = ''; // clear previous elements
+      const gridShown = clearGame()
 
-    const createBlock = (row: number, col: number) => {
-      const block = createSvgElement(svg.namespaceURI, "rect", {
-        height: Block.HEIGHT,
-        width: Block.WIDTH,
-        x: Block.WIDTH * col, // 20px each block
-        y: Block.HEIGHT * row,
-        style: "fill: green",
-      });
-      gameGrid.appendChild(block);
+      const createBlock = (row: number, col: number) => {
+        const block = createSvgElement(svg.namespaceURI, "rect", {
+          height: Block.HEIGHT,
+          width: Block.WIDTH,
+          x: Block.WIDTH * col, // 20px each block
+          y: Block.HEIGHT * row,
+          style: "fill: green",
+        });
+        gameGrid.appendChild(block);
+      }
+    
+      s.grid.forEach((row, i) => 
+        row.forEach((col, j) => 
+          gridShown[i][j] = col));
+
+      s.currentTetromino.shape.forEach((row, i) => 
+        row.forEach((col, j) => 
+          gridShown[i + s.row][j + s.col] = col));
+
+      gridShown.forEach((row, i) => 
+        row.forEach((col, j) => 
+          (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
+        
+      if (s.gameEnd) {
+        show(gameover);
+        onFinish();
+      } else {
+        hide(gameover);
+      }
     }
-  
-    s.grid.forEach((row, i) => 
-      row.forEach((col, j) => 
-        gridShown[i][j] = col));
+  }
 
-    s.currentTetromino.shape.forEach((row, i) => 
-      row.forEach((col, j) => 
-        gridShown[i + s.row][j + s.col] = col));
-
-    gridShown.forEach((row, i) => 
-      row.forEach((col, j) => 
-        (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
-      
-    if (s.gameEnd) {
-      subscription.unsubscribe();
-    }
-  };
-
-  const source$ = merge(input$, tick$)
-    .pipe(scan((s: State, event) => {
+  const source$ = merge(input$, tick$);
+  const state$ = source$.pipe(scan((s: State, event) => {
       const newState = processEvent(event, s);
-      console.log("game over?", newState.gameEnd)
       return newState; 
     }, initialState),)
-    // .subscribe((s: State) => {
-    //   render(s);
-
-    //   if (s.gameEnd) {
-    //     show(gameover);
-    //   } else {
-    //     hide(gameover);
-    //   }
-    // });
-
-  const subscription: Subscription = source$.subscribe((s: State) => {
-    render(s);
-
-    if (s.gameEnd) {
-      show(gameover);
-    } else {
-      hide(gameover);
-    }
-  });
+  const subscription: Subscription = state$.subscribe(render(() => subscription.unsubscribe()));
 
   /** Processing state */
 
