@@ -91,7 +91,7 @@ export function main() {
 
   /** User input */
 
-  const key$ = fromEvent<KeyboardEvent>(document, "keypress");
+  const key$ = fromEvent<KeyboardEvent>(document, "keydown");
 
   const fromKey = (keyCode: Key, direction: Direction) =>
     key$.pipe(
@@ -99,9 +99,10 @@ export function main() {
       map(() => new InputEvent(direction))
     );
 
-  const left$ = fromKey("KeyA", "left");
-  const right$ = fromKey("KeyD", "right");
-  const down$ = fromKey("KeyS", "down");
+  const left$ = fromKey("ArrowLeft", "left");
+  const up$ = fromKey("ArrowUp", "up")
+  const right$ = fromKey("ArrowRight", "right");
+  const down$ = fromKey("ArrowDown", "down");
   const input$ = merge(left$, right$, down$);
 
   /** Observables */

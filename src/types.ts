@@ -23,12 +23,12 @@ const Block = {
 
 /** User input */
 
-type Key = "KeyS" | "KeyA" | "KeyD";
+type Key = "ArrowLeft" | "ArrowUp" | "ArrowRight" | "ArrowDown";
 
 type Event = "keydown" | "keyup" | "keypress";
 
 /** Possible input directions */
-type Direction = "left" | "right" | "down";
+type Direction = "left" | "up" | "right" | "down";
 
 /** TETROMINO */
 

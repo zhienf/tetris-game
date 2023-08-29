@@ -12,12 +12,13 @@ class TickEvent {
   constructor() {}
 }
 
+// TODO: create a pseudo-random number sequence Observable that we have complete control over
 const randomTetromino = () => Tetrominos[Math.floor(Math.random() * Tetrominos.length)];
 
 const clearGame = () =>
   Array(Constants.GRID_HEIGHT)
     .fill(0)
-    .map(e => Array(Constants.GRID_WIDTH).fill(0));
+    .map(block => Array(Constants.GRID_WIDTH).fill(0));
 
 const initialState: State = {
   grid: clearGame(),
@@ -71,6 +72,8 @@ const move = (state: State, direction: Direction): State => {
       return checkCollisions(checkBounds(state), direction);
     case "down":
       return checkCollisions(checkBounds({ ...state, row: state.row + 1 }));
+    case "up":
+      return state;
   }
 };
 
