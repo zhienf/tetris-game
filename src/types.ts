@@ -1,5 +1,5 @@
 export { Viewport, Constants, Block, Tetrominos, colourMapping }
-export type { Key, Event, Direction, TetrominoType, State }
+export type { Key, Event, Direction, State }
 
 /** Constants */
 
@@ -30,63 +30,38 @@ type Event = "keydown" | "keyup" | "keypress";
 /** Possible input directions */
 type Direction = "left" | "right" | "down";
 
-/** Utility functions */
-
 /** TETROMINO */
-type TetrominoType = Readonly<{
-  shape: number[][];
-  colour: string;
-}>;
 
-const Tetrominos: TetrominoType[] = [
-  { // I Tetromino
-    shape: [
-      [1, 1, 1, 1],
-    ],
-    colour: 'cyan',
-  },
-  { // J Tetromino
-    shape: [
-      [2, 0, 0],
-      [2, 2, 2],
-    ],
-    colour: 'blue',
-  },
-  { // L Tetromino
-    shape: [
-      [0, 0, 3],
-      [3, 3, 3],
-    ],
-    colour: 'orange',
-  },
-  { // O Tetromino
-    shape: [
-      [4, 4],
-      [4, 4],
-    ],
-    colour: 'yellow',
-  },
-  { // S Tetromino
-    shape: [
-      [0, 5, 5],
-      [5, 5, 0],
-    ],
-    colour: 'green',
-  },
-  { // T Tetromino
-    shape: [
-      [0, 6, 0],
-      [6, 6, 6],
-    ],
-    colour: 'purple',
-  },
-  { // Z Tetromino
-    shape: [
-      [7, 7, 0],
-      [0, 7, 7],
-    ],
-    colour: 'red',
-  },
+type Tetromino = number[][];
+
+const Tetrominos: Tetromino[] = [ 
+  [ // I Tetromino
+    [1, 1, 1, 1],
+  ],
+  [ // J Tetromino
+    [2, 0, 0],
+    [2, 2, 2],
+  ],
+  [ // L Tetromino
+    [0, 0, 3],
+    [3, 3, 3],
+  ],
+  [ // O Tetromino
+    [4, 4],
+    [4, 4],
+  ],
+  [ // S Tetromino
+    [0, 5, 5],
+    [5, 5, 0],
+  ],
+  [ // T Tetromino
+    [0, 6, 0],
+    [6, 6, 6],
+  ],
+  [ // Z Tetromino
+    [7, 7, 0],
+    [0, 7, 7],
+  ],
 ];
 
 const colourMapping: Record<number, string> = {
@@ -110,5 +85,5 @@ type State = Readonly<{
   gameEnd: boolean;
   col: number;
   row: number;
-  currentTetromino: TetrominoType;
+  currentTetromino: number[][];
 }>;

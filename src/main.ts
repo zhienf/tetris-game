@@ -16,7 +16,7 @@ import "./style.css";
 
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
-import { Viewport, Constants, Block, Key, Event, Direction, TetrominoType, State, colourMapping } from './types'
+import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
 import { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore, updatePosition } from "./state"
 
 
@@ -138,7 +138,7 @@ export function main() {
         row.forEach((col, j) => 
           gridShown[i][j] = col));
 
-      s.currentTetromino.shape.forEach((row, i) => 
+      s.currentTetromino.forEach((row, i) => 
         row.forEach((col, j) => 
           gridShown[i + s.row][j + s.col] = updatePosition(gridShown[i + s.row][j + s.col], col)));
 
