@@ -190,4 +190,4 @@ const updateScore = (state: State): State => (filledRowIndex => {
       return { ...state, score: state.score + 10, linesCleared: state.linesCleared + 1 };
     }
     return state;
-  })(state.grid.findIndex(row => row.every(block => block === 1)));
+  })(state.grid.findIndex(row => row.every(block => block > 0)));

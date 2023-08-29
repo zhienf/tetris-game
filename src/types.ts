@@ -1,4 +1,4 @@
-export { Viewport, Constants, Block, Tetrominos }
+export { Viewport, Constants, Block, Tetrominos, colourMapping }
 export type { Key, Event, Direction, TetrominoType, State }
 
 /** Constants */
@@ -47,47 +47,57 @@ const Tetrominos: TetrominoType[] = [
   },
   { // J Tetromino
     shape: [
-      [1, 0, 0],
-      [1, 1, 1],
+      [2, 0, 0],
+      [2, 2, 2],
     ],
     colour: 'blue',
   },
   { // L Tetromino
     shape: [
-      [0, 0, 1],
-      [1, 1, 1],
+      [0, 0, 3],
+      [3, 3, 3],
     ],
     colour: 'orange',
   },
   { // O Tetromino
     shape: [
-      [1, 1],
-      [1, 1],
+      [4, 4],
+      [4, 4],
     ],
     colour: 'yellow',
   },
   { // S Tetromino
     shape: [
-      [0, 1, 1],
-      [1, 1, 0],
+      [0, 5, 5],
+      [5, 5, 0],
     ],
     colour: 'green',
   },
   { // T Tetromino
     shape: [
-      [0, 1, 0],
-      [1, 1, 1],
+      [0, 6, 0],
+      [6, 6, 6],
     ],
     colour: 'purple',
   },
   { // Z Tetromino
     shape: [
-      [1, 1, 0],
-      [0, 1, 1],
+      [7, 7, 0],
+      [0, 7, 7],
     ],
     colour: 'red',
   },
 ];
+
+const colourMapping: Record<number, string> = {
+  1: 'cyan',          
+  2: 'blue',
+  3: 'orange',
+  4: 'yellow',
+  5: 'green',
+  6: 'purple',
+  7: 'red'
+};
 
 /** State processing */
 

@@ -16,7 +16,7 @@ import "./style.css";
 
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
-import { Viewport, Constants, Block, Key, Event, Direction, TetrominoType, State } from './types'
+import { Viewport, Constants, Block, Key, Event, Direction, TetrominoType, State, colourMapping } from './types'
 import { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore, updatePosition } from "./state"
 
 
@@ -123,13 +123,13 @@ export function main() {
       scoreText.textContent = `${s.score}`;
       const gridShown = clearGame()
 
-      const createBlock = (row: number, col: number) => {
+      const createBlock = (row: number, col: number, colourIndex: number) => {
         const block = createSvgElement(svg.namespaceURI, "rect", {
           height: `${Block.HEIGHT}`,
           width: `${Block.WIDTH}`,
           x: `${Block.WIDTH * col}`, // 20px each block
           y: `${Block.HEIGHT * row}`,
-          style: `fill: ${s.currentTetromino.colour}`
+          style: `fill: ${colourMapping[colourIndex]}`
         });
         gameGrid.appendChild(block);
       }
@@ -144,7 +144,7 @@ export function main() {
 
       gridShown.forEach((row, i) => 
         row.forEach((col, j) => 
-          (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
+          (gridShown[i][j] != 0) ? createBlock(i, j, col) : 0));
         
       if (s.gameEnd) {
         highScoreText.textContent = `${s.highscore}`;
