@@ -14,7 +14,7 @@
 
 import "./style.css";
 
-import { fromEvent, interval, merge } from "rxjs";
+import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
 
 /** Constants */
@@ -121,33 +121,38 @@ const checkBounds = (state: State): State => {
   return boundedXY;
 };
 
+const isCollidingAtCell = (state: State, i: number, j: number, deltaRow: number = 0, deltaCol: number = 0): boolean => {
+  const isOnGround = state.row + state.currentTetromino.shape.length > Constants.GRID_HEIGHT - 1
+  if (state.currentTetromino.shape[i][j] !== 0) {
+    return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col + deltaCol] !== 0;
+  }
+  return false;
+};
+
+const isStackingOnBlocks = (state: State): boolean => {
+  return (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0))))
+}
+
+const checkStackingOnBlocks = (state: State): State => {
+  if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0)))) {
+    return tetrominoLanded(state);
+  }
+  return state;
+};
+
+const checkSideCollisions = (state: State, direction: Direction): State => {
+  const deltaCol = direction === "left" ? -1 : 1
+
+  if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 0, deltaCol)))) {
+    return state;
+  }
+  return checkStackingOnBlocks({ ...state, col: state.col + deltaCol });
+};
+
 const checkCollisions = (state: State, direction: Direction | null = null): State => {
   // checks whether the next potential position would go out of bound
   // if yes, stop falling and add current tetro to grid
   const isOnGround = state.row + state.currentTetromino.shape.length > Constants.GRID_HEIGHT - 1
-
-  const isCollidingAtCell = (state: State, i: number, j: number, deltaRow: number = 0, deltaCol: number = 0): boolean => {
-    if (state.currentTetromino.shape[i][j] !== 0) {
-      return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col + deltaCol] !== 0;
-    }
-    return false;
-  };
-
-  const checkStackingOnBlocks = (state: State): State => {
-    if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0)))) {
-      return tetrominoLanded(state);
-    }
-    return state;
-  };
-
-  const checkSideCollisions = (state: State, direction: Direction): State => {
-    const deltaCol = direction === "left" ? -1 : 1
-  
-    if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 0, deltaCol)))) {
-      return state;
-    }
-    return checkStackingOnBlocks({ ...state, col: state.col + deltaCol });
-  };
 
   return direction ? checkSideCollisions(state, direction) : isOnGround ? tetrominoLanded(state) : checkStackingOnBlocks(state);
 }
@@ -166,7 +171,8 @@ const tetrominoLanded = (s: State): State => {
     }))
 
   const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomBrick() }
-  return newState;
+  return isStackingOnBlocks(newState) ? { ...newState, gameEnd: true } : newState;
+  // return newState;
 };
 
 /**
@@ -182,7 +188,9 @@ const tick = (s: State): State => {
     row: s.row + 1,
   });
 
-  return checkCollisions(newState); // check if tetromino should land
+  // const collisionState = checkCollisions(newState)
+  // return isStackingOnBlocks(collisionState) ? { ...collisionState, gameEnd: true } : collisionState; // check if tetromino should land
+  return checkCollisions(newState);
 };
 
 /**
@@ -254,12 +262,9 @@ const createSvgElement = (
   namespace: string | null,
   name: string,
   props: TetrominoProps,
-  column: number
 ) => {
   const elem = document.createElementNS(namespace, name) as SVGElement;
-  if (column === 1) {
-    Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, String(v)));
-  }
+  Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, String(v)));
   return elem;
 };
 
@@ -274,6 +279,8 @@ export function main() {
   const preview = document.querySelector("#svgPreview") as SVGGraphicsElement &
     HTMLElement;
   const gameover = document.querySelector("#gameOver") as SVGGraphicsElement &
+    HTMLElement;
+  const gameGrid = svg.querySelector("#gameGrid") as SVGGraphicsElement &
     HTMLElement;
   const container = document.querySelector("#main") as HTMLElement;
 
@@ -325,7 +332,7 @@ export function main() {
    * @param s Current state
    */
   const render = (s: State) => {
-    svg.innerHTML = ''; // clear previous elements
+    gameGrid.innerHTML = ''; // clear previous elements
     const gridShown = clearGame()
 
     const createBlock = (row: number, col: number) => {
@@ -335,8 +342,8 @@ export function main() {
         x: Block.WIDTH * col, // 20px each block
         y: Block.HEIGHT * row,
         style: "fill: green",
-      }, 1);
-      svg.appendChild(block);
+      });
+      gameGrid.appendChild(block);
     }
   
     s.grid.forEach((row, i) => 
@@ -350,22 +357,37 @@ export function main() {
     gridShown.forEach((row, i) => 
       row.forEach((col, j) => 
         (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
+      
+    if (s.gameEnd) {
+      subscription.unsubscribe();
+    }
   };
 
   const source$ = merge(input$, tick$)
     .pipe(scan((s: State, event) => {
       const newState = processEvent(event, s);
-      return checkBounds(newState); 
-    }, initialState))
-    .subscribe((s: State) => {
-      render(s);
+      console.log("game over?", newState.gameEnd)
+      return newState; 
+    }, initialState),)
+    // .subscribe((s: State) => {
+    //   render(s);
 
-      if (s.gameEnd) {
-        show(gameover);
-      } else {
-        hide(gameover);
-      }
-    });
+    //   if (s.gameEnd) {
+    //     show(gameover);
+    //   } else {
+    //     hide(gameover);
+    //   }
+    // });
+
+  const subscription: Subscription = source$.subscribe((s: State) => {
+    render(s);
+
+    if (s.gameEnd) {
+      show(gameover);
+    } else {
+      hide(gameover);
+    }
+  });
 
   /** Processing state */
 
