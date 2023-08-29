@@ -1,5 +1,5 @@
-export { Viewport, Constants, Block }
-export type { Key, Event, Direction, TetrominoProps, Tetromino, State }
+export { Viewport, Constants, Block, Tetrominos }
+export type { Key, Event, Direction, TetrominoType, State }
 
 /** Constants */
 
@@ -33,21 +33,61 @@ type Direction = "left" | "right" | "down";
 /** Utility functions */
 
 /** TETROMINO */
-type TetrominoProps = Readonly<{
-  height: number,
-  width: number,
-  x: number,
-  y: number,
-  style: string,
+type TetrominoType = Readonly<{
+  shape: number[][];
+  colour: string;
 }>;
 
-type Tetromino = Readonly<{
-  shape: number[][],
-  topLeft: { row: number, col: number }
-  potentialX: number,
-  potentialY: number,
-  props: TetrominoProps
-}>;
+const Tetrominos: TetrominoType[] = [
+  { // I Tetromino
+    shape: [
+      [1, 1, 1, 1],
+    ],
+    colour: 'cyan',
+  },
+  { // J Tetromino
+    shape: [
+      [1, 0, 0],
+      [1, 1, 1],
+    ],
+    colour: 'blue',
+  },
+  { // L Tetromino
+    shape: [
+      [0, 0, 1],
+      [1, 1, 1],
+    ],
+    colour: 'orange',
+  },
+  { // O Tetromino
+    shape: [
+      [1, 1],
+      [1, 1],
+    ],
+    colour: 'yellow',
+  },
+  { // S Tetromino
+    shape: [
+      [0, 1, 1],
+      [1, 1, 0],
+    ],
+    colour: 'green',
+  },
+  { // T Tetromino
+    shape: [
+      [0, 1, 0],
+      [1, 1, 1],
+    ],
+    colour: 'purple',
+  },
+  { // Z Tetromino
+    shape: [
+      [1, 1, 0],
+      [0, 1, 1],
+    ],
+    colour: 'red',
+  },
+];
 
 /** State processing */
 
@@ -60,5 +100,5 @@ type State = Readonly<{
   gameEnd: boolean;
   col: number;
   row: number;
-  currentTetromino: Tetromino;
+  currentTetromino: TetrominoType;
 }>;

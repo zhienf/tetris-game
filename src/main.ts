@@ -16,8 +16,8 @@ import "./style.css";
 
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
-import { Viewport, Constants, Block, Key, Event, Direction, TetrominoProps, Tetromino, State } from './types'
-import { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore } from "./state"
+import { Viewport, Constants, Block, Key, Event, Direction, TetrominoType, State } from './types'
+import { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore, updatePosition } from "./state"
 
 
 /** Rendering (side effects) */
@@ -52,10 +52,10 @@ const hide = (elem: SVGGraphicsElement) =>
 const createSvgElement = (
   namespace: string | null,
   name: string,
-  props: TetrominoProps,
+  props: Record<string, string> = {}
 ) => {
   const elem = document.createElementNS(namespace, name) as SVGElement;
-  Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, String(v)));
+  Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, v));
   return elem;
 };
 
@@ -125,11 +125,11 @@ export function main() {
 
       const createBlock = (row: number, col: number) => {
         const block = createSvgElement(svg.namespaceURI, "rect", {
-          height: Block.HEIGHT,
-          width: Block.WIDTH,
-          x: Block.WIDTH * col, // 20px each block
-          y: Block.HEIGHT * row,
-          style: "fill: green",
+          height: `${Block.HEIGHT}`,
+          width: `${Block.WIDTH}`,
+          x: `${Block.WIDTH * col}`, // 20px each block
+          y: `${Block.HEIGHT * row}`,
+          style: `fill: ${s.currentTetromino.colour}`
         });
         gameGrid.appendChild(block);
       }
@@ -140,7 +140,7 @@ export function main() {
 
       s.currentTetromino.shape.forEach((row, i) => 
         row.forEach((col, j) => 
-          gridShown[i + s.row][j + s.col] = col));
+          gridShown[i + s.row][j + s.col] = updatePosition(gridShown[i + s.row][j + s.col], col)));
 
       gridShown.forEach((row, i) => 
         row.forEach((col, j) => 

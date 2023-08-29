@@ -1,6 +1,6 @@
-export { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore }
-import type { State, Direction, Tetromino } from "./types"
-import { Constants, Block } from "./types";
+export { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore, updatePosition }
+import type { State, Direction, TetrominoType } from "./types"
+import { Constants, Block, Tetrominos } from "./types";
 
 /** Event that represents an input */
 class InputEvent {
@@ -12,30 +12,18 @@ class TickEvent {
   constructor() {}
 }
 
-const randomBrick = () => tetrominoGreen;
+const randomTetromino = () => Tetrominos[Math.floor(Math.random() * Tetrominos.length)];
 
 const clearGame = () =>
   Array(Constants.GRID_HEIGHT)
     .fill(0)
     .map(e => Array(Constants.GRID_WIDTH).fill(0));
 
-const tetrominoGreen: Tetromino = { 
+const tetrominoGreen: TetrominoType = { 
   shape: [
     [1], 
   ], 
-  topLeft: {
-    row: 0,
-    col: 4
-  },
-  potentialX: 0,
-  potentialY: 4,
-  props: {
-    height: Block.HEIGHT,
-    width: Block.WIDTH,
-    x: Block.WIDTH,
-    y: Block.HEIGHT,
-    style: "fill: green",
-  }
+  colour: 'green'
 };
 
 const initialState: State = {
@@ -47,7 +35,7 @@ const initialState: State = {
   gameEnd: false,
   col: 4, // starting topLeft x of green
   row: 0, // starting topLeft y of green
-  currentTetromino: tetrominoGreen
+  currentTetromino: randomTetromino()
 } as const;
 
 /** Processing state */
@@ -92,6 +80,9 @@ const move = (state: State, direction: Direction): State => {
       return checkCollisions(checkBounds({ ...state, row: state.row + 1 }));
   }
 };
+
+const updatePosition = (position: number, column: number) =>
+  position === 0 ? column : position;
 
 /**
  * Ensure the rectangle is within bounds.
@@ -181,11 +172,10 @@ const tetrominoLanded = (s: State): State => {
       newGrid[i][j] = col));
 
   s.currentTetromino.shape.forEach((row, i) => 
-    row.forEach((col, j) => {
-      newGrid[i + s.row][j + s.col] = col
-    }))
+    row.forEach((col, j) => 
+      newGrid[i + s.row][j + s.col] = updatePosition(newGrid[i + s.row][j + s.col], col)));
 
-  const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomBrick() }
+  const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomTetromino() }
   // end game if newly generated tetromino immediately collides with row below
   return isStackingOnBlocks(newState) ? { ...newState, highscore: newState.score, gameEnd: true } : newState;
 };
