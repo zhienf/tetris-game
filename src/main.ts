@@ -60,6 +60,8 @@ type TetrominoProps = Readonly<{
 type Tetromino = Readonly<{
   shape: number[][],
   topLeft: { row: number, col: number }
+  potentialX: number,
+  potentialY: number,
   props: TetrominoProps
 }>;
 
@@ -71,6 +73,8 @@ const tetrominoGreen: Tetromino = {
     row: 0,
     col: 4
   },
+  potentialX: 0,
+  potentialY: 4,
   props: {
     height: Block.HEIGHT,
     width: Block.WIDTH,
@@ -92,28 +96,85 @@ position === 0 ? column : position; // if col is 0, update with 1
 
 /** State processing */
 
-// TODO: ? change x,y to Vec
 type State = Readonly<{
   grid: number[][];
   gameEnd: boolean;
-  x: number;
-  y: number;
+  col: number;
+  row: number;
   currentTetromino: Tetromino;
 }>;
-
-// TODO: modify to consider other tetromino type width
-const initialX = Math.floor(Viewport.CANVAS_WIDTH / 2) - Math.floor(Block.WIDTH / 2);
-const nearestMultipleOfBlockWidth = Math.floor(initialX / Block.WIDTH) * Block.WIDTH;
 
 const initialState: State = {
   grid: clearGame(),
   gameEnd: false,
-  x: 4,
-  y: 0,
+  col: 4, // starting topLeft x of green
+  row: 0, // starting topLeft y of green
   currentTetromino: tetrominoGreen
 } as const;
 
-let tetrominoElement: SVGElement | null = null; // TODO: let is mutable
+/**
+ * Ensure the rectangle is within bounds.
+ */
+const checkBounds = (state: State): State => {
+  const boundedX = boundX(state);
+  const boundedXY = boundY(boundedX);
+  return boundedXY;
+};
+
+const checkStacking = (state: State): State => {
+  // checks whether the next potential position would go out of bound
+  // if yes, stop falling and add current tetro to grid
+  const isOnGround = state.row + state.currentTetromino.shape.length > Constants.GRID_HEIGHT - 1
+
+  const isStackingOnBlocks = (state: State): boolean => {
+    const isCollidingAtCell = (i: number, j: number, deltaRow: number): boolean => {
+      if (state.currentTetromino.shape[i][j] !== 0) {
+        return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col] !== 0;
+      }
+      return false;
+    };
+    return state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(i, j, 1)));
+  };
+
+  if (isStackingOnBlocks(state) || isOnGround) {
+    return tetrominoLanded(state);
+  }
+  return state;
+};
+
+const checkSideCollisions = (state: State, direction: Direction): State => {
+  const isCollidingAtCell = (i: number, j: number, deltaCol: number): boolean => {
+    if (state.currentTetromino.shape[i][j] !== 0) {
+      return state.grid[i + state.row][j + state.col + deltaCol] !== 0;
+    }
+    return false;
+  };
+
+  const deltaCol = direction === "left" ? -1 : 1
+
+  if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(i, j, deltaCol)))) {
+    return state;
+  }
+  return { ...state, col: state.col + deltaCol };
+}
+
+/** Lands the current tetromino and adds it to grid */
+const tetrominoLanded = (s: State): State => {
+  const newGrid = clearGame();
+
+  s.grid.forEach((row, i) => 
+    row.forEach((col, j) => 
+      newGrid[i][j] = col));
+
+  s.currentTetromino.shape.forEach((row, i) => 
+    row.forEach((col, j) => {
+      console.log(s.row, s.col)
+      newGrid[i + s.row][j + s.col] = col
+    }))
+
+  const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomBrick() }
+  return newState;
+};
 
 /**
  * Updates the state by proceeding with one time step.
@@ -125,29 +186,10 @@ const tick = (s: State): State => {
   // Update the tetromino's position
   const newState = ({
     ...s,
-    y: s.y + 1,
+    row: s.row + 1,
   });
 
-  // // Check for collision with the bottom or other blocks
-  // if (collisionDetected(newState)) {
-  //   // Place the current tetromino on the grid
-  //   updateGridWithTetromino(newState);
-
-  //   // Spawn a new tetromino at the top
-  //   const newTetromino = [
-  //     [1], 
-  //   ];
-  //   newState.currentTetromino = newTetromino;
-  //   newState.y = 0; // Reset y-coordinate to the top
-  // }
-
-  // if (newState.y + Block.HEIGHT > Viewport.CANVAS_HEIGHT) {
-  //   tetrominoElement = null; 
-  //   newState.x = nearestMultipleOfBlockWidth; // TODO: impure?
-  //   newState.y = 0;
-  // }
-  
-  return newState;
+  return checkStacking(newState); // check if tetromino should land
 };
 
 /**
@@ -156,14 +198,14 @@ const tick = (s: State): State => {
  * it was out of bounds.
  */
 const boundX = (state: State): State => {
-  const { x, ...rest } = state;
+  const { col: x, ...rest } = state;
 
   if (x < 0) {
-    return { x: 0, ...rest };
+    return { col: 0, ...rest };
   }
 
-  if (x + 1 > Constants.GRID_WIDTH) {
-    return { x: Constants.GRID_WIDTH - 1, ...rest };
+  if (x > Constants.GRID_WIDTH - 1) {
+    return { col: Constants.GRID_WIDTH - 1, ...rest };
   }
   return state;
 };
@@ -174,14 +216,14 @@ const boundX = (state: State): State => {
  * it was out of bounds.
  */
 const boundY = (state: State): State => {
-  const { y, ...rest } = state;
+  const { row: y, ...rest } = state;
 
   if (y < 0) {
-    return { y: 0, ...rest };
+    return { row: 0, ...rest };
   }
 
-  if (y + 1 > Constants.GRID_HEIGHT) {
-    return { y: Constants.GRID_HEIGHT - 1, ...rest }; // TODO: need stop when collide
+  if (y > Constants.GRID_HEIGHT - 1) {
+    return { row: Constants.GRID_HEIGHT - 1, ...rest }; 
   }
   return state;
 };
@@ -290,22 +332,15 @@ export function main() {
    * @param s Current state
    */
   const render = (s: State) => {
-    // if (!tetrominoElement) {
-    //   tetrominoElement = createSvgElement(svg.namespaceURI, "rect", s.currentTetromino.props, 1);
-    //   svg.appendChild(tetrominoElement);
-    // }
-
-    // tetrominoElement.setAttribute("x", String(s.x));
-    // tetrominoElement.setAttribute("y", String(s.y));
-    svg.innerHTML = '';
+    svg.innerHTML = ''; // clear previous elements
     const gridShown = clearGame()
 
     const createBlock = (row: number, col: number) => {
       const block = createSvgElement(svg.namespaceURI, "rect", {
         height: Block.HEIGHT,
         width: Block.WIDTH,
-        x: Block.WIDTH * row, // 20px each block
-        y: Block.HEIGHT * col,
+        x: Block.WIDTH * col, // 20px each block
+        y: Block.HEIGHT * row,
         style: "fill: green",
       }, 1);
       svg.appendChild(block);
@@ -317,31 +352,17 @@ export function main() {
 
     s.currentTetromino.shape.forEach((row, i) => 
       row.forEach((col, j) => 
-        gridShown[i + s.x][j + s.y] = col));
+        gridShown[i + s.row][j + s.col] = col));
 
     gridShown.forEach((row, i) => 
       row.forEach((col, j) => 
         (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
-
-    // s.grid.forEach((row, i) => 
-    //   row.forEach((col, j) => 
-    //     (s.grid[i][j] != 0) ? createBlock(i, j) : 0));
-    
-    // s.currentTetromino.shape.forEach((row, i) => 
-    //   row.forEach((col, j) => {
-    //     console.log(i + s.currentTetromino.topLeft.col),
-    //     console.log(i + s.x),
-    //     console.log(j + s.currentTetromino.topLeft.row),
-    //     console.log(j + s.y),
-    //     (s.currentTetromino.shape[i][j] != 0) ? createBlock(i + s.x, j + s.y) : 0
-    //   })
-    // );
   };
 
   const source$ = merge(input$, tick$)
     .pipe(scan((s: State, event) => {
       const newState = processEvent(event, s);
-      return checkBounds(newState); // TODO: need check for collisions also
+      return checkBounds(newState); 
     }, initialState))
     .subscribe((s: State) => {
       render(s);
@@ -373,21 +394,12 @@ export function main() {
   const move = (state: State, direction: Direction): State => {
     switch (direction) {
       case "left":
-        return { ...state, x: state.x - 1 };
+        return checkStacking(checkSideCollisions(checkBounds(state), direction));
       case "right":
-        return { ...state, x: state.x + 1 };
+        return checkStacking(checkSideCollisions(checkBounds(state), direction));
       case "down":
-        return { ...state, y: state.y + 1 };
+        return checkStacking(checkBounds({ ...state, row: state.row + 1 }));
     }
-  };
-
-  /**
-   * Ensure the rectangle is within bounds.
-   */
-  const checkBounds = (state: State): State => {
-    const boundedX = boundX(state);
-    const boundedXY = boundY(boundedX);
-    return boundedXY;
   };
 }
 
