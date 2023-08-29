@@ -121,41 +121,35 @@ const checkBounds = (state: State): State => {
   return boundedXY;
 };
 
-const checkStacking = (state: State): State => {
+const checkCollisions = (state: State, direction: Direction | null = null): State => {
   // checks whether the next potential position would go out of bound
   // if yes, stop falling and add current tetro to grid
   const isOnGround = state.row + state.currentTetromino.shape.length > Constants.GRID_HEIGHT - 1
 
-  const isStackingOnBlocks = (state: State): boolean => {
-    const isCollidingAtCell = (i: number, j: number, deltaRow: number): boolean => {
-      if (state.currentTetromino.shape[i][j] !== 0) {
-        return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col] !== 0;
-      }
-      return false;
-    };
-    return state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(i, j, 1)));
-  };
-
-  if (isStackingOnBlocks(state) || isOnGround) {
-    return tetrominoLanded(state);
-  }
-  return state;
-};
-
-const checkSideCollisions = (state: State, direction: Direction): State => {
-  const isCollidingAtCell = (i: number, j: number, deltaCol: number): boolean => {
+  const isCollidingAtCell = (state: State, i: number, j: number, deltaRow: number = 0, deltaCol: number = 0): boolean => {
     if (state.currentTetromino.shape[i][j] !== 0) {
-      return state.grid[i + state.row][j + state.col + deltaCol] !== 0;
+      return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col + deltaCol] !== 0;
     }
     return false;
   };
 
-  const deltaCol = direction === "left" ? -1 : 1
-
-  if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(i, j, deltaCol)))) {
+  const checkStackingOnBlocks = (state: State): State => {
+    if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0)))) {
+      return tetrominoLanded(state);
+    }
     return state;
-  }
-  return { ...state, col: state.col + deltaCol };
+  };
+
+  const checkSideCollisions = (state: State, direction: Direction): State => {
+    const deltaCol = direction === "left" ? -1 : 1
+  
+    if (state.currentTetromino.shape.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 0, deltaCol)))) {
+      return state;
+    }
+    return checkStackingOnBlocks({ ...state, col: state.col + deltaCol });
+  };
+
+  return direction ? checkSideCollisions(state, direction) : isOnGround ? tetrominoLanded(state) : checkStackingOnBlocks(state);
 }
 
 /** Lands the current tetromino and adds it to grid */
@@ -168,7 +162,6 @@ const tetrominoLanded = (s: State): State => {
 
   s.currentTetromino.shape.forEach((row, i) => 
     row.forEach((col, j) => {
-      console.log(s.row, s.col)
       newGrid[i + s.row][j + s.col] = col
     }))
 
@@ -189,7 +182,7 @@ const tick = (s: State): State => {
     row: s.row + 1,
   });
 
-  return checkStacking(newState); // check if tetromino should land
+  return checkCollisions(newState); // check if tetromino should land
 };
 
 /**
@@ -394,11 +387,10 @@ export function main() {
   const move = (state: State, direction: Direction): State => {
     switch (direction) {
       case "left":
-        return checkStacking(checkSideCollisions(checkBounds(state), direction));
       case "right":
-        return checkStacking(checkSideCollisions(checkBounds(state), direction));
+        return checkCollisions(checkBounds(state), direction);
       case "down":
-        return checkStacking(checkBounds({ ...state, row: state.row + 1 }));
+        return checkCollisions(checkBounds({ ...state, row: state.row + 1 }));
     }
   };
 }
