@@ -1,4 +1,4 @@
-export { processEvent, TickEvent, InputEvent, clearGame, initialState }
+export { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore }
 import type { State, Direction, Tetromino } from "./types"
 import { Constants, Block } from "./types";
 
@@ -40,6 +40,10 @@ const tetrominoGreen: Tetromino = {
 
 const initialState: State = {
   grid: clearGame(),
+  level: 0,
+  score: 0,
+  highscore: 0,
+  linesCleared: 0,
   gameEnd: false,
   col: 4, // starting topLeft x of green
   row: 0, // starting topLeft y of green
@@ -183,5 +187,17 @@ const tetrominoLanded = (s: State): State => {
 
   const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomBrick() }
   // end game if newly generated tetromino immediately collides with row below
-  return isStackingOnBlocks(newState) ? { ...newState, gameEnd: true } : newState;
+  return isStackingOnBlocks(newState) ? { ...newState, highscore: newState.score, gameEnd: true } : newState;
 };
+
+const updateScore = (state: State): State => (filledRowIndex => {
+    if (filledRowIndex > -1) {
+      state.grid.splice(filledRowIndex, 1);
+      state.grid.unshift(Array(Constants.GRID_WIDTH).fill(0));
+      if (state.linesCleared + 1 === 10) {
+        return { ...state, level: state.level + 1, score: state.score + 10, linesCleared: 0 };
+      }
+      return { ...state, score: state.score + 10, linesCleared: state.linesCleared + 1 };
+    }
+    return state;
+  })(state.grid.findIndex(row => row.every(block => block === 1)));

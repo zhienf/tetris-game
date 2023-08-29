@@ -17,7 +17,7 @@ import "./style.css";
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
 import { Viewport, Constants, Block, Key, Event, Direction, TetrominoProps, Tetromino, State } from './types'
-import { processEvent, TickEvent, InputEvent, clearGame, initialState } from "./state"
+import { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore } from "./state"
 
 
 /** Rendering (side effects) */
@@ -85,6 +85,10 @@ export function main() {
   const scoreText = document.querySelector("#scoreText") as HTMLElement;
   const highScoreText = document.querySelector("#highScoreText") as HTMLElement;
 
+  levelText.textContent = '0';
+  scoreText.textContent = '0';
+  highScoreText.textContent = '0';
+
   /** User input */
 
   const key$ = fromEvent<KeyboardEvent>(document, "keypress");
@@ -115,6 +119,8 @@ export function main() {
   function render(onFinish: () => void) {
     return function (s: State): void {
       gameGrid.innerHTML = ''; // clear previous elements
+      levelText.textContent = `${s.level}`;
+      scoreText.textContent = `${s.score}`;
       const gridShown = clearGame()
 
       const createBlock = (row: number, col: number) => {
@@ -141,6 +147,7 @@ export function main() {
           (gridShown[i][j] != 0) ? createBlock(i, j) : 0));
         
       if (s.gameEnd) {
+        highScoreText.textContent = `${s.highscore}`;
         show(gameover);
         onFinish();
       } else {
@@ -152,7 +159,7 @@ export function main() {
   const source$ = merge(input$, tick$);
   const state$ = source$.pipe(scan((s: State, event) => {
       const newState = processEvent(event, s);
-      return newState; 
+      return updateScore(newState); 
     }, initialState),)
   const subscription: Subscription = state$.subscribe(render(() => subscription.unsubscribe()));
 }
