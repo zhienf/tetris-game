@@ -125,7 +125,12 @@ const boundY = (state: State): State => {
   return state;
 };
 
-const isCollidingAtCell = (state: State, i: number, j: number, deltaRow: number = 0, deltaCol: number = 0): boolean => {
+const isCollidingAtCell = (
+  state: State, 
+  i: number, 
+  j: number, 
+  deltaRow: number = 0, 
+  deltaCol: number = 0): boolean => {
   const isOnGround = state.row + state.currentTetromino.length > Constants.GRID_HEIGHT - 1
   if (state.currentTetromino[i][j] !== 0) {
     return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col + deltaCol] !== 0;
@@ -134,7 +139,8 @@ const isCollidingAtCell = (state: State, i: number, j: number, deltaRow: number 
 };
 
 const isStackingOnBlocks = (state: State): boolean => {
-  return (state.currentTetromino.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0))))
+  return (state.currentTetromino.some((row, i) => 
+    row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0))))
 }
 
 const checkStackingOnBlocks = (state: State): State => {
@@ -147,7 +153,8 @@ const checkStackingOnBlocks = (state: State): State => {
 const checkSideCollisions = (state: State, direction: Direction): State => {
   const deltaCol = direction === "left" ? -1 : 1
 
-  if (state.currentTetromino.some((row, i) => row.some((_, j) => isCollidingAtCell(state, i, j, 0, deltaCol)))) {
+  if (state.currentTetromino.some((row, i) => 
+    row.some((_, j) => isCollidingAtCell(state, i, j, 0, deltaCol)))) {
     return state;
   }
   return checkStackingOnBlocks({ ...state, col: state.col + deltaCol });
@@ -156,7 +163,9 @@ const checkSideCollisions = (state: State, direction: Direction): State => {
 const checkCollisions = (state: State, direction: Direction | null = null): State => {
   const isOnGround = state.row + state.currentTetromino.length > Constants.GRID_HEIGHT - 1
 
-  return direction ? checkSideCollisions(state, direction) : isOnGround ? tetrominoLanded(state) : checkStackingOnBlocks(state);
+  return direction 
+  ? checkSideCollisions(state, direction) 
+  : isOnGround ? tetrominoLanded(state) : checkStackingOnBlocks(state);
 }
 
 /** Lands the current tetromino and adds it to grid */
@@ -171,19 +180,38 @@ const tetrominoLanded = (s: State): State => {
     row.forEach((col, j) => 
       newGrid[i + s.row][j + s.col] = updatePosition(newGrid[i + s.row][j + s.col], col)));
 
-  const newState = { ...s, grid: newGrid, col: 4, row: 0, currentTetromino: randomTetromino() }
+  const newState = { 
+    ...s, 
+    grid: newGrid, 
+    col: 4, 
+    row: 0, 
+    currentTetromino: randomTetromino() 
+  }
   // end game if newly generated tetromino immediately collides with row below
-  return isStackingOnBlocks(newState) ? { ...newState, highscore: newState.score, gameEnd: true } : newState;
+  return isStackingOnBlocks(newState) 
+  ? { ...newState, highscore: newState.score, gameEnd: true } 
+  : newState;
 };
 
 const updateScore = (state: State): State => (filledRowIndex => {
     if (filledRowIndex > -1) {
-      state.grid.splice(filledRowIndex, 1);
-      state.grid.unshift(Array(Constants.GRID_WIDTH).fill(0));
-      if (state.linesCleared + 1 === 10) {
-        return { ...state, level: state.level + 1, score: state.score + 10, linesCleared: 0 };
-      }
-      return { ...state, score: state.score + 10, linesCleared: state.linesCleared + 1 };
+      // concatenating the rows before and after the filled row, 
+      // and adding a new empty row at the beginning.
+      const newGrid = [
+        Array(Constants.GRID_WIDTH).fill(0),
+        ...state.grid.slice(0, filledRowIndex),
+        ...state.grid.slice(filledRowIndex + 1)
+      ];
+
+      const shouldIncreaseLevel = state.linesCleared + 1 === 10
+
+      return { 
+        ...state, 
+        grid: newGrid, 
+        level: shouldIncreaseLevel ? state.level + 1 : state.level, 
+        score: state.score + 10, 
+        linesCleared: shouldIncreaseLevel ? 0 : state.linesCleared + 1 
+      };
     }
     return state;
   })(state.grid.findIndex(row => row.every(block => block > 0)));
