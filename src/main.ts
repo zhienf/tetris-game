@@ -103,7 +103,7 @@ export function main() {
   const up$ = fromKey("ArrowUp", "up")
   const right$ = fromKey("ArrowRight", "right");
   const down$ = fromKey("ArrowDown", "down");
-  const input$ = merge(left$, right$, down$);
+  const input$ = merge(left$, up$, right$, down$);
 
   /** Observables */
 
@@ -140,12 +140,17 @@ export function main() {
           gridShown[i][j] = col));
 
       s.currentTetromino.forEach((row, i) => 
-        row.forEach((col, j) => 
-          gridShown[i + s.row][j + s.col] = updatePosition(gridShown[i + s.row][j + s.col], col)));
-
+        row.forEach((col, j) => {
+          if (col !== 0) {
+            gridShown[i + s.row][j + s.col] = updatePosition(gridShown[i + s.row][j + s.col], col);
+          }
+        }));
+      
       gridShown.forEach((row, i) => 
         row.forEach((col, j) => 
           (gridShown[i][j] != 0) ? createBlock(i, j, col) : 0));
+      
+      // console.log(gridShown)
         
       if (s.gameEnd) {
         highScoreText.textContent = `${s.highscore}`;

@@ -69,11 +69,11 @@ const move = (state: State, direction: Direction): State => {
   switch (direction) {
     case "left":
     case "right":
-      return checkCollisions(checkBounds(state), direction);
+      return checkBounds(checkCollisions(state, direction))
     case "down":
-      return checkCollisions(checkBounds({ ...state, row: state.row + 1 }));
+      return checkCollisions({ ...state, row: state.row + 1 });
     case "up":
-      return state;
+      return checkBounds(rotate(state));
   }
 };
 
@@ -96,13 +96,18 @@ const checkBounds = (state: State): State => {
  */
 const boundX = (state: State): State => {
   const { col: x, ...rest } = state;
-
   if (x < 0) {
+    if (state.currentTetromino.every(row => row.length > 0 && row[-x - 1] === 0)) {
+      return state;
+    }
     return { col: 0, ...rest };
   }
 
-  if (x > Constants.GRID_WIDTH - 1) {
-    return { col: Constants.GRID_WIDTH - 1, ...rest };
+  if (x > Constants.GRID_WIDTH - state.currentTetromino.length) {
+    if (state.currentTetromino.every(row => row.length > 0 && row[Constants.GRID_WIDTH - x] === 0)) {
+        return state;
+    }
+    return { col: Constants.GRID_WIDTH - state.currentTetromino.length, ...rest };
   }
   return state;
 };
@@ -119,11 +124,29 @@ const boundY = (state: State): State => {
     return { row: 0, ...rest };
   }
 
-  if (y > Constants.GRID_HEIGHT - 1) {
-    return { row: Constants.GRID_HEIGHT - 1, ...rest }; 
+  if (y > Constants.GRID_HEIGHT - state.currentTetromino.length) {
+    if (state.currentTetromino[Constants.GRID_HEIGHT - state.currentTetromino.length - y].every(col => col === 0)) {
+      return state;
+    }
+    return { row: y - 1, ...rest }; 
   }
   return state;
 };
+
+/**  
+ * reducing the array to a single value (the index of the last non-empty row) 
+ * based on the input array and an initial value
+ */ 
+const findLastNonEmptyRowIndex = (state: State): number => 
+  state.currentTetromino.reduceRight((result, row, index) => {
+    if (result === -1 && row.some(block => block !== 0)) {
+      return index;
+    }
+    return result;
+  }, -1);
+
+const isOnGround = (state: State): boolean => 
+  state.row + findLastNonEmptyRowIndex(state) === Constants.GRID_HEIGHT - 1;
 
 const isCollidingAtCell = (
   state: State, 
@@ -131,9 +154,9 @@ const isCollidingAtCell = (
   j: number, 
   deltaRow: number = 0, 
   deltaCol: number = 0): boolean => {
-  const isOnGround = state.row + state.currentTetromino.length > Constants.GRID_HEIGHT - 1
+
   if (state.currentTetromino[i][j] !== 0) {
-    return !isOnGround && state.grid[i + state.row + deltaRow][j + state.col + deltaCol] !== 0;
+    return !isOnGround(state) && state.grid[i + state.row + deltaRow][j + state.col + deltaCol] !== 0;
   }
   return false;
 };
@@ -161,11 +184,9 @@ const checkSideCollisions = (state: State, direction: Direction): State => {
 };
 
 const checkCollisions = (state: State, direction: Direction | null = null): State => {
-  const isOnGround = state.row + state.currentTetromino.length > Constants.GRID_HEIGHT - 1
-
   return direction 
   ? checkSideCollisions(state, direction) 
-  : isOnGround ? tetrominoLanded(state) : checkStackingOnBlocks(state);
+  : isOnGround(state) ? tetrominoLanded(state) : checkStackingOnBlocks(state);
 }
 
 /** Lands the current tetromino and adds it to grid */
@@ -177,8 +198,12 @@ const tetrominoLanded = (s: State): State => {
       newGrid[i][j] = col));
 
   s.currentTetromino.forEach((row, i) => 
-    row.forEach((col, j) => 
-      newGrid[i + s.row][j + s.col] = updatePosition(newGrid[i + s.row][j + s.col], col)));
+    row.forEach((col, j) => {
+      // filtering out of bound columns
+      if (col !== 0) {
+        newGrid[i + s.row][j + s.col] = updatePosition(newGrid[i + s.row][j + s.col], col)
+      }
+    }));
 
   const newState = { 
     ...s, 
@@ -188,7 +213,7 @@ const tetrominoLanded = (s: State): State => {
     currentTetromino: randomTetromino() 
   }
   // end game if newly generated tetromino immediately collides with row below
-  return isStackingOnBlocks(newState) 
+  return isStackingOnBlocks((newState)) 
   ? { ...newState, highscore: newState.score, gameEnd: true } 
   : newState;
 };
@@ -214,4 +239,20 @@ const updateScore = (state: State): State => (filledRowIndex => {
       };
     }
     return state;
-  })(state.grid.findIndex(row => row.every(block => block > 0)));
+  })(state.grid.findIndex(row => row.every(block => block !== 0)));
+
+const rotate = (state: State): State => {
+  const rows = state.currentTetromino.length;
+  const cols = state.currentTetromino[0].length;
+
+  const rotatedTetromino = [];
+
+  for (let j = 0; j < cols; j++) {
+    const newRow = [];
+    for (let i = rows - 1; i >= 0; i--) {
+      newRow.push(state.currentTetromino[i][j]);
+    }
+    rotatedTetromino.push(newRow);
+  }
+  return { ...state, currentTetromino: rotatedTetromino };
+}
