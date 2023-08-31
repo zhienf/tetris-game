@@ -1,5 +1,5 @@
 export { Viewport, Constants, Block, Tetrominos, colourMapping }
-export type { Key, Event, Direction, State }
+export type { Key, Event, Direction, State, Tetromino }
 
 /** Constants */
 

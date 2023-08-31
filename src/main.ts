@@ -17,7 +17,7 @@ import "./style.css";
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
 import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
-import { processEvent, TickEvent, InputEvent, clearGame, initialState, updateScore, updatePosition } from "./state"
+import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState } from "./state"
 
 
 /** Rendering (side effects) */
@@ -166,7 +166,7 @@ export function main() {
   const state$ = source$.pipe(scan((s: State, event) => {
       const newState = processEvent(event, s);
       return updateScore(newState); 
-    }, initialState),)
+    }, createNewState()),)
   const subscription: Subscription = state$.subscribe(render(() => subscription.unsubscribe()));
 }
 
