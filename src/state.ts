@@ -1,4 +1,4 @@
-export { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState }
+export { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState, findFirstNonEmptyRowIndex }
 import type { State, Direction, Tetromino } from "./types"
 import { Constants, Block, Tetrominos } from "./types";
 
@@ -12,8 +12,33 @@ class TickEvent {
   constructor() {}
 }
 
-// TODO: create a pseudo-random number sequence Observable that we have complete control over
-const randomTetromino = (): Tetromino => Tetrominos[Math.floor(Math.random() * Tetrominos.length)];
+// const randomTetromino = (randomNumber: number): Tetromino => Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
+const randomTetromino = (randomNumber: number) => Tetrominos[Math.floor(Math.random() * Tetrominos.length)];
+
+/**
+ * A random number generator which provides two pure functions
+ * `hash` and `scaleToRange`.  Call `hash` repeatedly to generate the
+ * sequence of hashes.
+ */
+abstract class RNG {
+  // LCG using GCC's constants
+  private static m = 0x80000000; // 2**31
+  private static a = 1103515245;
+  private static c = 12345;
+
+  /**
+   * Call `hash` repeatedly to generate the sequence of hashes.
+   * @param seed
+   * @returns a hash of the seed
+   */
+  public static hash = (seed: number) => (RNG.a * seed + RNG.c) % RNG.m;
+
+  /**
+   * Takes hash value and scales it to the range [0, 1)
+   */
+  // public static scale = (hash: number) => (2 * hash) / (RNG.m - 1) - 1;
+  public static scale = (hash: number) => (hash + RNG.m) / (2 * RNG.m);
+}
 
 const clearGame = () =>
   Array(Constants.GRID_HEIGHT)
@@ -21,14 +46,20 @@ const clearGame = () =>
     .map(block => Array(Constants.GRID_WIDTH).fill(0));
 
 const createNewState = (previousState: State | null = null): State => {
-  const newTetromino: Tetromino = randomTetromino();
+  const seed =  12345678
+  const randomNumber1 = RNG.hash(seed);
+  const randomNumber2 = RNG.hash(randomNumber1);
+  const newTetromino1: Tetromino = randomTetromino(randomNumber1);
+  const newTetromino2: Tetromino = randomTetromino(randomNumber2);
 
   if (previousState) {
     const newState: State = {
       ...previousState, 
-      col: 4, 
-      row: findFirstNonEmptyRowIndex(newTetromino), 
-      currentTetromino: newTetromino
+      col: Math.floor((Constants.GRID_WIDTH - previousState.nextTetromino.length) / 2), 
+      row: 0, 
+      currentTetromino: previousState.nextTetromino,
+      nextTetromino: randomTetromino(previousState.seed),
+      seed: RNG.hash(previousState.seed)
     }
     return newState;
   }
@@ -39,9 +70,11 @@ const createNewState = (previousState: State | null = null): State => {
     highscore: 0,
     linesCleared: 0,
     gameEnd: false,
-    col: 4, 
-    row: findFirstNonEmptyRowIndex(newTetromino), 
-    currentTetromino: newTetromino
+    col: Math.floor((Constants.GRID_WIDTH - newTetromino1.length) / 2), 
+    row: 0, 
+    currentTetromino: newTetromino1,
+    nextTetromino: newTetromino2,
+    seed: RNG.hash(randomNumber2)
   } as const;
 
   return initialState;
@@ -53,6 +86,7 @@ const createNewState = (previousState: State | null = null): State => {
  * Update state based on the event that comes in.
  */
 const processEvent = (event: InputEvent | TickEvent, state: State): State => {
+  console.log(state.seed, RNG.scale(state.seed))
   if (event instanceof TickEvent) return tick(state);
   if (event instanceof InputEvent)
     return move(state, event.direction);

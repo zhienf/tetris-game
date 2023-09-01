@@ -37,8 +37,8 @@ type Tetromino = number[][];
 const Tetrominos: Tetromino[] = [ 
   [ // I Tetromino
     [0, 0, 0, 0],
-    [0, 0, 0, 0],
     [1, 1, 1, 1],
+    [0, 0, 0, 0],
     [0, 0, 0, 0],
   ],
   [ // J Tetromino
@@ -56,9 +56,9 @@ const Tetrominos: Tetromino[] = [
     [4, 4],
   ],
   [ // S Tetromino
-    [0, 0, 0],
     [0, 5, 5],
     [5, 5, 0],
+    [0, 0, 0],
   ],
   [ // T Tetromino
     [0, 6, 0],
@@ -66,9 +66,9 @@ const Tetrominos: Tetromino[] = [
     [0, 0, 0],
   ],
   [ // Z Tetromino
-    [0, 0, 0],
     [7, 7, 0],
     [0, 7, 7],
+    [0, 0, 0],
   ],
 ];
 
@@ -94,4 +94,6 @@ type State = Readonly<{
   col: number;
   row: number;
   currentTetromino: Tetromino;
+  nextTetromino: Tetromino;
+  seed: number;
 }>;
