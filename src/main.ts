@@ -17,7 +17,7 @@ import "./style.css";
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
 import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
-import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState } from "./state"
+import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState, findFirstNonEmptyRowIndex } from "./state"
 
 
 /** Rendering (side effects) */
@@ -120,11 +120,12 @@ export function main() {
   function render(onFinish: () => void) {
     return function (s: State): void {
       gameGrid.innerHTML = ''; // clear previous elements
+      preview.innerHTML = '';
       levelText.textContent = `${s.level}`;
       scoreText.textContent = `${s.score}`;
       const gridShown = clearGame()
 
-      const createBlock = (row: number, col: number, colourIndex: number) => {
+      const createBlock = (row: number, col: number, colourIndex: number, elem: string) => {
         const block = createSvgElement(svg.namespaceURI, "rect", {
           height: `${Block.HEIGHT}`,
           width: `${Block.WIDTH}`,
@@ -132,7 +133,14 @@ export function main() {
           y: `${Block.HEIGHT * row}`,
           style: `fill: ${colourMapping[colourIndex]}`
         });
-        gameGrid.appendChild(block);
+        switch (elem) {
+          case "grid":
+            gameGrid.appendChild(block);
+            break;
+          case "preview":
+            preview.appendChild(block);
+            break;
+        }
       }
     
       s.grid.forEach((row, i) => 
@@ -145,10 +153,17 @@ export function main() {
             gridShown[i + s.row][j + s.col] = updatePosition(gridShown[i + s.row][j + s.col], col);
           }
         }));
+
+      s.nextTetromino.forEach((row, i) =>
+        row.forEach((col, j) => {
+          if (col !== 0) {
+            createBlock(i+1, j+2, col, "preview");
+          }
+        }));
       
       gridShown.forEach((row, i) => 
         row.forEach((col, j) => 
-          (gridShown[i][j] != 0) ? createBlock(i, j, col) : 0));
+          (gridShown[i][j] != 0) ? createBlock(i, j, col, "grid") : 0));
       
       // console.log(gridShown)
         
@@ -166,7 +181,7 @@ export function main() {
   const state$ = source$.pipe(scan((s: State, event) => {
       const newState = processEvent(event, s);
       return updateScore(newState); 
-    }, createNewState()),)
+    }, createNewState()))
   const subscription: Subscription = state$.subscribe(render(() => subscription.unsubscribe()));
 }
 
