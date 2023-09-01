@@ -17,7 +17,7 @@ import "./style.css";
 import { fromEvent, interval, merge, Subscription } from "rxjs";
 import { map, filter, scan } from "rxjs/operators";
 import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
-import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState, findFirstNonEmptyRowIndex } from "./state"
+import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState } from "./state"
 
 
 /** Rendering (side effects) */
