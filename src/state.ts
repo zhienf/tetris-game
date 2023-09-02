@@ -207,11 +207,10 @@ const isSideColliding = (state: State, deltaCol: number): boolean =>
   state.currentTetromino.some((row, i) => 
     row.some((_, j) => isCollidingAtCell(state, i, j, 0, deltaCol)));
 
-const checkSideCollisions = (state: State, direction: Direction): State => {
-  const deltaCol = direction === "left" ? -1 : 1
-  return isSideColliding(state, deltaCol) 
-    ? state : checkStackingOnBlocks({ ...state, col: state.col + deltaCol });
-};
+const checkSideCollisions = (state: State, direction: Direction): State => 
+  (deltaCol => isSideColliding(state, deltaCol) 
+    ? state : checkStackingOnBlocks({ ...state, col: state.col + deltaCol })
+  )(direction === "left" ? -1 : 1);
 
 const checkCollisions = (state: State, direction: Direction | null = null): State => 
   direction ? checkSideCollisions(state, direction) 
@@ -229,9 +228,8 @@ const tetrominoLanded = (s: State): State => {
   s.currentTetromino.forEach((row, i) => 
     row.forEach((col, j) => {
       // filtering out of bound columns
-      if (col !== 0) {
-        newGrid[i + s.row][j + s.col] = updatePosition(newGrid[i + s.row][j + s.col], col)
-      }
+      if (col !== 0) 
+        newGrid[i + s.row][j + s.col] = updatePosition(newGrid[i + s.row][j + s.col], col);
     }));
 
   const newState = createNewState({ 
