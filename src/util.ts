@@ -2,6 +2,7 @@
  * A random number generator which provides two pure functions
  * `hash` and `scaleToRange`.  Call `hash` repeatedly to generate the
  * sequence of hashes.
+ * Referred to FIT2102 Asteroid example.
  */
 export abstract class RNG {
     // LCG using GCC's constants

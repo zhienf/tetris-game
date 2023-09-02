@@ -19,22 +19,48 @@ const Constants = {
 const Block = {
   WIDTH: Viewport.CANVAS_WIDTH / Constants.GRID_WIDTH,
   HEIGHT: Viewport.CANVAS_HEIGHT / Constants.GRID_HEIGHT,
-};
+} as const;
 
-/** User input */
-
+/**
+ * String literal type for each key used in game control
+ */
 type Key = "ArrowLeft" | "ArrowUp" | "ArrowRight" | "ArrowDown";
 
-type Event = "keydown" | "keyup" | "keypress";
+/**
+ * Input event
+ */
+type Event = "keydown";
 
-/** Possible input directions */
+/**
+ * Possible input directions
+ */
 type Direction = "left" | "up" | "right" | "down";
 
-/** TETROMINO */
+/**
+ * State representing the current game state
+ */
+type State = Readonly<{
+  grid: number[][];
+  level: number;
+  score: number;
+  linesCleared: number;
+  gameEnd: boolean;
+  col: number;
+  row: number;
+  currentTetromino: Tetromino;
+  nextTetromino: Tetromino;
+  seed: number;
+}>;
 
+/**
+ * 2D array representation of a Tetromino
+ */
 type Tetromino = number[][];
 
-const Tetrominos: Tetromino[] = [
+/**
+ * An array of Tetrominos representing their shapes
+ * */
+const Tetrominos: readonly Tetromino[] = [
   [
     // I Tetromino
     [0, 0, 0, 0],
@@ -79,6 +105,9 @@ const Tetrominos: Tetromino[] = [
   ],
 ];
 
+/**
+ * Maps numbers to string color names for Tetrominoes.
+ */
 const colourMapping: Record<number, string> = {
   1: "cyan",
   2: "blue",
@@ -87,19 +116,4 @@ const colourMapping: Record<number, string> = {
   5: "green",
   6: "purple",
   7: "red",
-};
-
-/** State processing */
-
-type State = Readonly<{
-  grid: number[][];
-  level: number;
-  score: number;
-  linesCleared: number;
-  gameEnd: boolean;
-  col: number;
-  row: number;
-  currentTetromino: Tetromino;
-  nextTetromino: Tetromino;
-  seed: number;
-}>;
+} as const;
