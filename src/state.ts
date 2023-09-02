@@ -1,47 +1,17 @@
 export { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState }
 import type { State, Direction, Tetromino } from "./types"
 import { Constants, Block, Tetrominos } from "./types";
+import { RNG } from "./util"
 
-/** Event that represents an input */
-class InputEvent {
-  constructor(public readonly direction: Direction) {}
-}
-
-/** Event that represents a tick to update the rectangle position */
-class TickEvent {
-  constructor() {}
-}
-
-const randomTetromino = (randomNumber: number): Tetromino => Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
-
-/**
- * A random number generator which provides two pure functions
- * `hash` and `scaleToRange`.  Call `hash` repeatedly to generate the
- * sequence of hashes.
- */
-abstract class RNG {
-  // LCG using GCC's constants
-  private static m = 0x80000000; // 2**31
-  private static a = 1103515245;
-  private static c = 12345;
-
-  /**
-   * Call `hash` repeatedly to generate the sequence of hashes.
-   * @param seed
-   * @returns a hash of the seed
-   */
-  public static hash = (seed: number) => (RNG.a * seed + RNG.c) % RNG.m;
-
-  /**
-   * Takes hash value and scales it to the range [0, 1]
-   */
-  public static scale = (hash: number) => hash / (RNG.m - 1);
-}
+/** Initial state set up */
 
 const clearGame = () =>
   Array(Constants.GRID_HEIGHT)
     .fill(0)
-    .map(block => Array(Constants.GRID_WIDTH).fill(0));
+    .map(_ => Array(Constants.GRID_WIDTH).fill(0));
+
+const randomTetromino = (randomNumber: number): Tetromino => 
+  Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
 
 const createNewState = (previousState: State | null = null): State => {
   const seed =  12345678
@@ -78,18 +48,26 @@ const createNewState = (previousState: State | null = null): State => {
   return initialState;
 };
 
+/** Event that represents an input */
+class InputEvent {
+  constructor(public readonly direction: Direction) {}
+}
+
+/** Event that represents a tick to update the rectangle position */
+class TickEvent {
+  constructor() {}
+}
+
 /** Processing state */
 
 /**
  * Update state based on the event that comes in.
  */
 const processEvent = (event: InputEvent | TickEvent, state: State): State => {
-  console.log(state.seed, RNG.scale(state.seed))
   if (event instanceof TickEvent) 
     return tick(state);
   if (event instanceof InputEvent)
     return move(state, event.direction);
-
   return state;
 };
 
@@ -99,15 +77,8 @@ const processEvent = (event: InputEvent | TickEvent, state: State): State => {
  * @param s Current state
  * @returns Updated state
  */
-const tick = (s: State): State => {
-  // Update the tetromino's position
-  const newState = ({
-    ...s,
-    row: s.row + 1,
-  });
-
-  return checkBounds(checkCollisions(newState));
-};
+const tick = (s: State): State => 
+  checkBounds(checkCollisions({ ...s, row: s.row + 1 }));
 
 /**
  * Update the state to change the direction the rectangle
@@ -150,7 +121,8 @@ const boundX = (state: State): State => {
       ? state : { col: 0, ...rest };
 
   if (x > Constants.GRID_WIDTH - state.currentTetromino.length)
-    return (state.currentTetromino.every(row => row.length > 0 && row[Constants.GRID_WIDTH - x] === 0))
+    return (state.currentTetromino.every(row => row.length > 0 
+            && row[Constants.GRID_WIDTH - x] === 0))
       ? state : { col: Constants.GRID_WIDTH - state.currentTetromino.length, ...rest };
 
   return state;
@@ -197,8 +169,8 @@ const isCollidingAtCell = (
     : false;
 
 const isStackingOnBlocks = (state: State): boolean => 
-  (state.currentTetromino.some((row, i) => 
-    row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0))));
+  state.currentTetromino.some((row, i) => 
+    row.some((_, j) => isCollidingAtCell(state, i, j, 1, 0)));
 
 const checkStackingOnBlocks = (state: State): State => 
   isStackingOnBlocks(state) ? tetrominoLanded(state) : state;

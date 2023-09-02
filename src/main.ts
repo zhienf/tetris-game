@@ -14,8 +14,8 @@
 
 import "./style.css";
 
-import { fromEvent, interval, merge, Subscription } from "rxjs";
-import { map, filter, scan } from "rxjs/operators";
+import { fromEvent, interval, merge, Subscription, of } from "rxjs";
+import { map, filter, scan, startWith, switchMapTo } from "rxjs/operators";
 import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
 import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState } from "./state"
 
@@ -110,6 +110,9 @@ export function main() {
   /** Determines the rate of time steps */
   const tick$ = interval(Constants.TICK_RATE_MS).pipe(map(() => new TickEvent()));
 
+  const restartButton = document.getElementById("restartButton") as HTMLElement;
+  const restartEvent$ = fromEvent(restartButton, 'click');
+
   /**
    * Renders the current state to the canvas.
    *
@@ -183,6 +186,14 @@ export function main() {
       return updateScore(newState); 
     }, createNewState()))
   const subscription: Subscription = state$.subscribe(render(() => subscription.unsubscribe()));
+
+  // const resetGameState = (): State => createNewState();
+
+  // const gameState$ = restartEvent$.pipe(
+  //   startWith(null), // Initialize with null to trigger initial game state
+  //   switchMapTo(of(resetGameState())), // Reset the game state when restart event occurs
+  //   scan((state, action) => processEvent(action, state), initialState)
+  // );
 }
 
 // The following simply runs your main function on window load.  Make sure to leave it in place.
