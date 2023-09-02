@@ -12,8 +12,7 @@ class TickEvent {
   constructor() {}
 }
 
-// const randomTetromino = (randomNumber: number): Tetromino => Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
-const randomTetromino = (randomNumber: number) => Tetrominos[Math.floor(Math.random() * Tetrominos.length)];
+const randomTetromino = (randomNumber: number): Tetromino => Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
 
 /**
  * A random number generator which provides two pure functions
@@ -34,10 +33,9 @@ abstract class RNG {
   public static hash = (seed: number) => (RNG.a * seed + RNG.c) % RNG.m;
 
   /**
-   * Takes hash value and scales it to the range [0, 1)
+   * Takes hash value and scales it to the range [0, 1]
    */
-  // public static scale = (hash: number) => (2 * hash) / (RNG.m - 1) - 1;
-  public static scale = (hash: number) => (hash + RNG.m) / (2 * RNG.m);
+  public static scale = (hash: number) => hash / (RNG.m - 1);
 }
 
 const clearGame = () =>
@@ -63,6 +61,7 @@ const createNewState = (previousState: State | null = null): State => {
     }
     return newState;
   }
+
   const initialState: State = {
     grid: clearGame(),
     level: 0,
