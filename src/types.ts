@@ -88,7 +88,6 @@ type State = Readonly<{
   grid: number[][];
   level: number;
   score: number;
-  highscore: number;
   linesCleared: number;
   gameEnd: boolean;
   col: number;

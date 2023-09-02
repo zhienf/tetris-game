@@ -14,8 +14,8 @@
 
 import "./style.css";
 
-import { fromEvent, interval, merge, Subscription, of } from "rxjs";
-import { map, filter, scan, startWith, switchMapTo } from "rxjs/operators";
+import { fromEvent, interval, merge, BehaviorSubject } from "rxjs";
+import { map, filter, scan, takeWhile, take } from "rxjs/operators";
 import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
 import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState } from "./state"
 
@@ -110,9 +110,6 @@ export function main() {
   /** Determines the rate of time steps */
   const tick$ = interval(Constants.TICK_RATE_MS).pipe(map(() => new TickEvent()));
 
-  const restartButton = document.getElementById("restartButton") as HTMLElement;
-  const restartEvent$ = fromEvent(restartButton, 'click');
-
   /**
    * Renders the current state to the canvas.
    *
@@ -167,11 +164,8 @@ export function main() {
       gridShown.forEach((row, i) => 
         row.forEach((col, j) => 
           (gridShown[i][j] != 0) ? createBlock(i, j, col, "grid") : 0));
-      
-      // console.log(gridShown)
         
       if (s.gameEnd) {
-        highScoreText.textContent = `${s.highscore}`;
         show(gameover);
         onFinish();
       } else {
@@ -180,20 +174,47 @@ export function main() {
     }
   }
 
+  const restartButton = document.getElementById("restartButton") as HTMLElement;
+  fromEvent(restartButton, 'click').subscribe(restartGame);
+  const currentScore$ = new BehaviorSubject(0)
+  const highScore$ = new BehaviorSubject(0);
+  const gameOngoing$ = new BehaviorSubject(true);
   const source$ = merge(input$, tick$);
-  const state$ = source$.pipe(scan((s: State, event) => {
-      const newState = processEvent(event, s);
-      return updateScore(newState); 
-    }, createNewState()))
-  const subscription: Subscription = state$.subscribe(render(() => subscription.unsubscribe()));
 
-  // const resetGameState = (): State => createNewState();
+  startGame();
 
-  // const gameState$ = restartEvent$.pipe(
-  //   startWith(null), // Initialize with null to trigger initial game state
-  //   switchMapTo(of(resetGameState())), // Reset the game state when restart event occurs
-  //   scan((state, action) => processEvent(action, state), initialState)
-  // );
+  function startGame() {
+    const state$ = source$.pipe(
+      scan((s: State, event) => {
+        const newState = processEvent(event, s);
+        return updateScore(newState); 
+      }, createNewState()), 
+      takeWhile(gameOngoing)
+    );
+
+    const score$ = state$.pipe(
+      map((state) => state.score)
+    );
+
+    state$.subscribe(render(() => gameOngoing$.next(false)));
+    score$.subscribe(score => currentScore$.next(score));
+  }
+
+  function gameOngoing() {
+    return gameOngoing$.getValue()
+  }
+
+  function restartGame() {
+    gameOngoing$.next(true);
+    startGame();
+    currentScore$.pipe(take(1)).subscribe(currentScore => {
+      const currentHighScore = highScore$.getValue();
+      if (currentScore > currentHighScore) {
+        highScore$.next(currentScore);
+      }
+      highScoreText.textContent = `${highScore$.getValue()}`;
+    });
+  }
 }
 
 // The following simply runs your main function on window load.  Make sure to leave it in place.

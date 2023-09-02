@@ -14,7 +14,7 @@ const randomTetromino = (randomNumber: number): Tetromino =>
   Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
 
 const createNewState = (previousState: State | null = null): State => {
-  const seed =  12345678
+  const seed =  Math.random() * 10
   const randomNumber1 = RNG.hash(seed);
   const randomNumber2 = RNG.hash(randomNumber1);
   const newTetromino1: Tetromino = randomTetromino(randomNumber1);
@@ -36,7 +36,6 @@ const createNewState = (previousState: State | null = null): State => {
     grid: clearGame(),
     level: 0,
     score: 0,
-    highscore: 0,
     linesCleared: 0,
     gameEnd: false,
     col: Math.floor((Constants.GRID_WIDTH - newTetromino1.length) / 2), 
@@ -210,7 +209,7 @@ const tetrominoLanded = (s: State): State => {
   })
   // end game if newly generated tetromino immediately collides with row below
   return isStackingOnBlocks((newState)) 
-  ? { ...newState, highscore: newState.score, gameEnd: true } 
+  ? { ...newState, gameEnd: true } 
   : newState;
 };
 
