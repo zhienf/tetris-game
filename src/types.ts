@@ -1,5 +1,5 @@
-export { Viewport, Constants, Block, Tetrominos, colourMapping }
-export type { Key, Event, Direction, State, Tetromino }
+export { Viewport, Constants, Block, Tetrominos, colourMapping };
+export type { Key, Event, Direction, State, Tetromino };
 
 /** Constants */
 
@@ -34,38 +34,45 @@ type Direction = "left" | "up" | "right" | "down";
 
 type Tetromino = number[][];
 
-const Tetrominos: Tetromino[] = [ 
-  [ // I Tetromino
+const Tetrominos: Tetromino[] = [
+  [
+    // I Tetromino
     [0, 0, 0, 0],
     [1, 1, 1, 1],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ],
-  [ // J Tetromino
+  [
+    // J Tetromino
     [2, 0, 0],
     [2, 2, 2],
     [0, 0, 0],
   ],
-  [ // L Tetromino
+  [
+    // L Tetromino
     [0, 0, 3],
     [3, 3, 3],
     [0, 0, 0],
   ],
-  [ // O Tetromino
+  [
+    // O Tetromino
     [4, 4],
     [4, 4],
   ],
-  [ // S Tetromino
+  [
+    // S Tetromino
     [0, 5, 5],
     [5, 5, 0],
     [0, 0, 0],
   ],
-  [ // T Tetromino
+  [
+    // T Tetromino
     [0, 6, 0],
     [6, 6, 6],
     [0, 0, 0],
   ],
-  [ // Z Tetromino
+  [
+    // Z Tetromino
     [7, 7, 0],
     [0, 7, 7],
     [0, 0, 0],
@@ -73,13 +80,13 @@ const Tetrominos: Tetromino[] = [
 ];
 
 const colourMapping: Record<number, string> = {
-  1: 'cyan',          
-  2: 'blue',
-  3: 'orange',
-  4: 'yellow',
-  5: 'green',
-  6: 'purple',
-  7: 'red'
+  1: "cyan",
+  2: "blue",
+  3: "orange",
+  4: "yellow",
+  5: "green",
+  6: "purple",
+  7: "red",
 };
 
 /** State processing */

@@ -16,9 +16,25 @@ import "./style.css";
 
 import { fromEvent, interval, merge, BehaviorSubject } from "rxjs";
 import { map, filter, scan, takeWhile, take } from "rxjs/operators";
-import { Viewport, Constants, Block, Key, Event, Direction, State, colourMapping } from './types'
-import { processEvent, TickEvent, InputEvent, clearGame, updateScore, updatePosition, createNewState } from "./state"
-
+import {
+  Viewport,
+  Constants,
+  Block,
+  Key,
+  Event,
+  Direction,
+  State,
+  colourMapping,
+} from "./types";
+import {
+  processEvent,
+  TickEvent,
+  InputEvent,
+  clearGame,
+  updateScore,
+  updatePosition,
+  createNewState,
+} from "./state";
 
 /** Rendering (side effects) */
 
@@ -85,9 +101,9 @@ export function main() {
   const scoreText = document.querySelector("#scoreText") as HTMLElement;
   const highScoreText = document.querySelector("#highScoreText") as HTMLElement;
 
-  levelText.textContent = '0';
-  scoreText.textContent = '0';
-  highScoreText.textContent = '0';
+  levelText.textContent = "0";
+  scoreText.textContent = "0";
+  highScoreText.textContent = "0";
 
   /** User input */
 
@@ -100,7 +116,7 @@ export function main() {
     );
 
   const left$ = fromKey("ArrowLeft", "left");
-  const up$ = fromKey("ArrowUp", "up")
+  const up$ = fromKey("ArrowUp", "up");
   const right$ = fromKey("ArrowRight", "right");
   const down$ = fromKey("ArrowDown", "down");
   const input$ = merge(left$, up$, right$, down$);
@@ -108,7 +124,9 @@ export function main() {
   /** Observables */
 
   /** Determines the rate of time steps */
-  const tick$ = interval(Constants.TICK_RATE_MS).pipe(map(() => new TickEvent()));
+  const tick$ = interval(Constants.TICK_RATE_MS).pipe(
+    map(() => new TickEvent())
+  );
 
   /**
    * Renders the current state to the canvas.
@@ -119,19 +137,24 @@ export function main() {
    */
   function render(onFinish: () => void) {
     return function (s: State): void {
-      gameGrid.innerHTML = ''; // clear previous elements
-      preview.innerHTML = '';
+      gameGrid.innerHTML = ""; // clear previous elements
+      preview.innerHTML = "";
       levelText.textContent = `${s.level}`;
       scoreText.textContent = `${s.score}`;
-      const gridShown = clearGame()
+      const gridShown = clearGame();
 
-      const createBlock = (row: number, col: number, colourIndex: number, elem: string) => {
+      const createBlock = (
+        row: number,
+        col: number,
+        colourIndex: number,
+        elem: string
+      ) => {
         const block = createSvgElement(svg.namespaceURI, "rect", {
           height: `${Block.HEIGHT}`,
           width: `${Block.WIDTH}`,
           x: `${Block.WIDTH * col}`, // 20px each block
           y: `${Block.HEIGHT * row}`,
-          style: `fill: ${colourMapping[colourIndex]}`
+          style: `fill: ${colourMapping[colourIndex]}`,
         });
         switch (elem) {
           case "grid":
@@ -141,42 +164,49 @@ export function main() {
             preview.appendChild(block);
             break;
         }
-      }
-    
-      s.grid.forEach((row, i) => 
-        row.forEach((col, j) => 
-          gridShown[i][j] = col));
+      };
 
-      s.currentTetromino.forEach((row, i) => 
+      s.grid.forEach((row, i) =>
+        row.forEach((col, j) => (gridShown[i][j] = col))
+      );
+
+      s.currentTetromino.forEach((row, i) =>
         row.forEach((col, j) => {
           if (col !== 0) {
-            gridShown[i + s.row][j + s.col] = updatePosition(gridShown[i + s.row][j + s.col], col);
+            gridShown[i + s.row][j + s.col] = updatePosition(
+              gridShown[i + s.row][j + s.col],
+              col
+            );
           }
-        }));
+        })
+      );
 
       s.nextTetromino.forEach((row, i) =>
         row.forEach((col, j) => {
           if (col !== 0) {
-            createBlock(i+1, j+2, col, "preview");
+            createBlock(i + 1, j + 2, col, "preview");
           }
-        }));
-      
-      gridShown.forEach((row, i) => 
-        row.forEach((col, j) => 
-          (gridShown[i][j] != 0) ? createBlock(i, j, col, "grid") : 0));
-        
+        })
+      );
+
+      gridShown.forEach((row, i) =>
+        row.forEach((col, j) =>
+          gridShown[i][j] != 0 ? createBlock(i, j, col, "grid") : 0
+        )
+      );
+
       if (s.gameEnd) {
         show(gameover);
         onFinish();
       } else {
         hide(gameover);
       }
-    }
+    };
   }
 
   const restartButton = document.getElementById("restartButton") as HTMLElement;
-  fromEvent(restartButton, 'click').subscribe(restartGame);
-  const currentScore$ = new BehaviorSubject(0)
+  fromEvent(restartButton, "click").subscribe(restartGame);
+  const currentScore$ = new BehaviorSubject(0);
   const highScore$ = new BehaviorSubject(0);
   const gameOngoing$ = new BehaviorSubject(true);
   const source$ = merge(input$, tick$);
@@ -187,27 +217,25 @@ export function main() {
     const state$ = source$.pipe(
       scan((s: State, event) => {
         const newState = processEvent(event, s);
-        return updateScore(newState); 
-      }, createNewState()), 
+        return updateScore(newState);
+      }, createNewState()),
       takeWhile(gameOngoing)
     );
 
-    const score$ = state$.pipe(
-      map((state) => state.score)
-    );
+    const score$ = state$.pipe(map((state) => state.score));
 
     state$.subscribe(render(() => gameOngoing$.next(false)));
-    score$.subscribe(score => currentScore$.next(score));
+    score$.subscribe((score) => currentScore$.next(score));
   }
 
   function gameOngoing() {
-    return gameOngoing$.getValue()
+    return gameOngoing$.getValue();
   }
 
   function restartGame() {
     gameOngoing$.next(true);
     startGame();
-    currentScore$.pipe(take(1)).subscribe(currentScore => {
+    currentScore$.pipe(take(1)).subscribe((currentScore) => {
       const currentHighScore = highScore$.getValue();
       if (currentScore > currentHighScore) {
         highScore$.next(currentScore);
