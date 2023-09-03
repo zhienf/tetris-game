@@ -12,7 +12,7 @@
         <g id="gameOver" visibility="hidden">
           <rect x="26" y="120" fill="white" height="100" width="149"></rect>
           <text x="36" y="160">Game Over</text>
-          <text x="68" y="192" font-size="18" fill="#4380fa" cursor="pointer" id="restartButton">Restart</text>
+          <text x="34" y="192" font-size="18" fill="#ff0000" cursor="pointer" id="restartButton">Click to Restart</text>
         </g>
         <!-- Grid blocks -->
         <g id="gameGrid"></g>
@@ -32,6 +32,35 @@
             <span class="left">Highscore: </span>
             <span class="right" id="highScoreText">...</span>
           </div>
+        </div>
+        <div id="controls">
+          <h4>Controls:</h4>
+          <table>
+            <tr>
+              <td>Move Left</td>
+              <td>
+                <div id="ArrowLeft" class="key">&#8678;</div>
+              </td>
+            </tr>
+            <tr>
+              <td>Move Right</td>
+              <td>
+                <div id="ArrowRight" class="key">&#8680;</div>
+              </td>
+            </tr>
+            <tr>
+              <td>Move Down</td>
+              <td>
+                <div id="ArrowDown" class="key">&#8681;</div>
+              </td>
+            </tr>
+            <tr>
+              <td>Rotate</td>
+              <td>
+                <div id="ArrowUp" class="key">&#8679;</div>
+              </td>
+            </tr>
+          </table>
         </div>
       </div>
     </main>

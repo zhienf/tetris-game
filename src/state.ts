@@ -16,17 +16,14 @@ import { RNG } from "./util";
 /**
  * Creates and returns a new empty game grid, represented as a 2D array.
  * The dimensions of the grid are determined by Constants.GRID_HEIGHT and Constants.GRID_WIDTH.
- * @returns {number[][]} An empty game grid.
  */
-const clearGame = () =>
+const clearGame = (): number[][] =>
   Array(Constants.GRID_HEIGHT)
     .fill(0)
     .map((_) => Array(Constants.GRID_WIDTH).fill(0));
 
 /**
  * Generates a random Tetromino based on a given random number.
- * @param {number} randomNumber - A random number used for Tetromino selection.
- * @returns {Tetromino} A randomly selected Tetromino.
  */
 const randomTetromino = (randomNumber: number): Tetromino =>
   Tetrominos[Math.floor(RNG.scale(randomNumber) * Tetrominos.length)];
@@ -38,7 +35,7 @@ const randomTetromino = (randomNumber: number): Tetromino =>
  * @returns {State} A new game state with the specified parameters.
  */
 const createNewState = (previousState: State | null = null): State => {
-  const seed = 1;
+  const seed = Date.now();
 
   // Generate random numbers for Tetromino selection
   const randomNumber1 = RNG.hash(seed);
