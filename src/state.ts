@@ -156,7 +156,11 @@ const checkBounds = (state: State): State => {
  */
 const boundX = (state: State): State => {
   const { col: x, ...rest } = state;
-
+  // if out of horizontal bounds, 
+  // check if the part of tetromino going out of bound is all empty cells,
+  // if yes allow it to be out of bound,
+  // else reposition it back to previous position to stay in bound.
+  // this also allows wall kicks.
   if (x < 0)
     return state.currentTetromino.every(
       (row) => row.length > 0 && row[-x - 1] === 0
@@ -182,7 +186,11 @@ const boundX = (state: State): State => {
  */
 const boundY = (state: State): State => {
   const { row: y, ...rest } = state;
-
+  // if out of vertical bounds, 
+  // check if the part of tetromino going out of bound is all empty cells,
+  // if yes allow it to be out of bound,
+  // else reposition it back to previous position to stay in bound.
+  // this also allows floor kicks.
   if (y < 0)
     return state.currentTetromino[-y - 1].every((col) => col === 0)
       ? state
@@ -253,6 +261,7 @@ const isStackingOnBlocks = (state: State): boolean =>
   );
 
 const checkStackingOnBlocks = (state: State): State =>
+  // if is stacking on blocks, land it, else update the new position
   isStackingOnBlocks(state) ? tetrominoLanded(state) : state;
 
 /**
@@ -265,6 +274,9 @@ const isSideColliding = (state: State, deltaCol: number): boolean =>
 
 const checkSideCollisions = (state: State, direction: Direction): State =>
   ((deltaCol) =>
+    // check if the potential position would cause collision
+    // if yes revert back to previous position
+    // else update new position and check for stacking on blocks
     isSideColliding(state, deltaCol)
       ? state
       : checkStackingOnBlocks({ ...state, col: state.col + deltaCol }))(
@@ -282,6 +294,9 @@ const checkCollisions = (
   state: State,
   direction: Direction | null = null
 ): State =>
+  // if direction (left / right) is specified, check for side collisions,
+  // else check if it is on ground yet, 
+  // if yes land it, if not check whether it's stacking on other blocks
   direction
     ? checkSideCollisions(state, direction)
     : isOnGround(state)
@@ -309,6 +324,7 @@ const tetrominoLanded = (s: State): State => {
     })
   );
 
+  // Create a new state with the updated game grid
   const newState = createNewState({
     ...s,
     grid: newGrid,
